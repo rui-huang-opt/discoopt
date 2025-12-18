@@ -72,7 +72,7 @@ nh = NodeHandle(name=node_id)
 
 from dco import LossFunction, Optimizer
 
-loss_fn = LossFunction(f)
+loss_fn = LossFunction(f, backend="jax")
 optimizer = Optimizer.create(loss_fn, nh, gamma, algorithm)
 
 theta_i = np.zeros(2)
