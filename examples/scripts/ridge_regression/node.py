@@ -48,19 +48,19 @@ def f(var: NDArray[np.float64]) -> NDArray[np.float64]:
     return (u[node_id] @ var - v[node_id]) ** 2 + rho * var @ var
 
 
-from dco import LossFunction, Optimizer
-
-loss_fn = LossFunction(f)
-optimizer = Optimizer.create(gamma, key=algorithm)
-
 from topolink import NodeHandle
 
 nh = NodeHandle(name=node_id)
 
+from dco import LossFunction, Optimizer
+
+loss_fn = LossFunction(f)
+optimizer = Optimizer.create(loss_fn, nh, gamma, algorithm)
+
 x_i = np.zeros(dim)
 
-optimizer.init(x_i, loss_fn, nh)
+optimizer.init(x_i)
 
 for k in range(max_iter):
-    x_i = optimizer.step(x_i, loss_fn, nh)
+    x_i = optimizer.step(x_i)
     print(f"Node {node_id} iteration {k}: x = {x_i}")

@@ -66,19 +66,18 @@ def f(var: NDArray[np.float64]) -> Array:
     return jnp.mean(signal_diff**2) + regularizer
 
 
-from dco import LossFunction, Optimizer
-
-loss_fn = LossFunction(f)
-optimizer = Optimizer.create(gamma, key=algorithm)
-
 from topolink import NodeHandle
 
 nh = NodeHandle(name=node_id)
 
+from dco import LossFunction, Optimizer
+
+loss_fn = LossFunction(f)
+optimizer = Optimizer.create(loss_fn, nh, gamma, algorithm)
+
 theta_i = np.zeros(2)
 
-optimizer.init(theta_i, loss_fn, nh)
-
+optimizer.init(theta_i)
 for k in range(max_iter):
-    theta_i = optimizer.step(theta_i, loss_fn, nh)
+    theta_i = optimizer.step(theta_i)
     print(f"Node {node_id} iteration {k}: theta = {theta_i}")
