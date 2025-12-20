@@ -1,4 +1,4 @@
-# Distributed Composite Optimization (DCO)
+# Distributed Composite Optimization (DisCoOpt)
 Distributed Composite Optimization (DCO) is a Python package for solving composite optimization problems of the form
 
 $$
@@ -19,13 +19,13 @@ This package contains the experimental code for the paper *A Unified Framework f
 Install via pip:
 
 ```bash
-pip install git+https://github.com/rui-huang-opt/dco.git
+pip install git+https://github.com/rui-huang-opt/discoopt.git
 ```
 
 Or, for development:
 
 ```bash
-git clone https://github.com/rui-huang-opt/dco.git
+git clone https://github.com/rui-huang-opt/discoopt.git
 cd dco
 pip install -e .
 ```
@@ -111,7 +111,7 @@ basicConfig(level=INFO)
 
 import numpy as np
 from numpy.typing import NDArray
-from dco import LossFunction, Optimizer
+from discoopt import LossFunction, Optimizer
 from topolink import NodeHandle
 
 # Node-specific data (replace with your own)
