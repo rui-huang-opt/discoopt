@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 requires-python = ">=3.10"
-name = "dco"
+name = "discoopt"
 version = "0.1.0"
 description = "Distributed Composite Optimization"
 authors = [

@@ -52,7 +52,7 @@ from topolink import NodeHandle
 
 nh = NodeHandle(name=node_id)
 
-from dco import LossFunction, Optimizer
+from discoopt import LossFunction, Optimizer
 
 loss_fn = LossFunction(f)
 optimizer = Optimizer.create(loss_fn, nh, gamma, algorithm)
