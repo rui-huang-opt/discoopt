@@ -30,17 +30,7 @@ from logging import basicConfig, INFO
 basicConfig(level=INFO)
 
 # Distributed optimization
-step_sizes = {
-    "EXTRA": 0.16,
-    "NIDS": 0.21,
-    "DIGing": 0.11,
-    "AugDGM": 0.31,
-    "WE": 0.17,
-    "RGT": 0.11,
-}
-
-algorithm = "AugDGM"
-gamma = step_sizes[algorithm]
+gamma = 0.31
 max_iter = 2000
 
 
@@ -52,10 +42,9 @@ from topolink import NodeHandle
 
 nh = NodeHandle(name=node_id)
 
-from discoopt import LossFunction, Optimizer
+from discoopt.optimizer import AugDGM
 
-loss_fn = LossFunction(f)
-optimizer = Optimizer.create(loss_fn, nh, gamma, algorithm)
+optimizer = AugDGM(f, nh, gamma)
 
 x_i = np.zeros(dim)
 

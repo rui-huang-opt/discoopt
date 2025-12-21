@@ -105,14 +105,8 @@ Please fill in the details of the additional algorithms as needed.
 
 ```python
 # Distributed optimization example
-
-from logging import basicConfig, INFO
-basicConfig(level=INFO)
-
 import numpy as np
 from numpy.typing import NDArray
-from discoopt import LossFunction, Optimizer
-from topolink import NodeHandle
 
 # Node-specific data (replace with your own)
 node_id = "1"
@@ -122,30 +116,21 @@ rho = 0.1
 dimension = 3
 step_size = 0.01
 
-# ===============================
-# Approach 1: Add regularization directly in the objective
-# ===============================
-def f_i_direct(x_i: NDArray[np.float64]) -> NDArray[np.float64]:
+
+# Define loss function
+def f_i(x_i: NDArray[np.float64]) -> NDArray[np.float64]:
     return (u_i @ x_i - v_i) ** 2 + rho * x_i @ x_i
 
-loss_fn_direct = LossFunction(f_i_direct)
-
-# ===============================
-# Approach 2: Use the L2 regularization parameter in LossFunction
-# ===============================
-def f_i_l2(x_i: NDArray[np.float64]) -> NDArray[np.float64]:
-    return (u_i @ x_i - v_i) ** 2
-
-loss_fn_l2 = LossFunction(f_i_l2, g_type="l2", lam=rho)
-
-# Both approaches are equivalent; you can use either `loss_fn_direct` or `loss_fn_l2`
-loss_fn = loss_fn_l2  # choose one to run
 
 # Network handle
+from topolink import NodeHandle
+
 nh = NodeHandle(node_id)
 
 # Optimizer setup
-optimizer = Optimizer.create(loss_fn, nh, step_size, algorithm="EXTRA")
+from discoopt.optimizer import EXTRA
+
+optimizer = EXTRA(f_i, nh, step_size)
 
 x_i = np.zeros(dimension)
 

@@ -3,10 +3,13 @@ from logging import getLogger
 logger = getLogger("dco.optimizer")
 
 from abc import ABCMeta, abstractmethod
+from typing import Callable, Type
 from numpy import sqrt, float64, zeros_like
 from numpy.typing import NDArray
-from .network import NetworkOps
-from .loss_function import LossFunction
+from jax import Array
+from ._autodiff import nabla
+from ._network import NetworkOps
+from .regularizer import Regularizer
 
 
 class Optimizer(metaclass=ABCMeta):
@@ -15,14 +18,20 @@ class Optimizer(metaclass=ABCMeta):
 
     Parameters
     ----------
-    loss_fn : LossFunction
-        The loss function to be minimized.
+    loss_fn : Callable[[NDArray[float64]], NDArray[float64] | Array]
+        The local loss function to be minimized.
 
     ops : NetworkOps
-        The network operations for distributed communication.
+        Network operations for communication between nodes.
 
     gamma : float
-        Step size or learning rate for the optimizer.
+        Step size for the optimization algorithm.
+
+    reg : Regularizer | None, optional
+        Regularizer to be applied to the optimization problem. If None, no regularization is applied. Default is None.
+
+    use_jax : bool, optional
+        Whether to use JAX for automatic differentiation. If False, Autograd will be used. Default is True.
 
     Methods
     -------
@@ -37,50 +46,84 @@ class Optimizer(metaclass=ABCMeta):
     This is an abstract base class. Specific optimization algorithms should inherit from this class and implement the `init` and `step` methods.
     """
 
-    _SUBCLASSES: dict[str, type["Optimizer"]] = {}
+    _registry: dict[str, Type["Optimizer"]] = {}
 
-    def __init_subclass__(cls, key: str, **kwargs):
+    def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        cls._SUBCLASSES[key] = cls
+        cls._registry[cls.__name__] = cls
 
-    def __init__(self, loss_fn: LossFunction, ops: NetworkOps, gamma: float):
-        self._loss_fn = loss_fn
+    def __init__(
+        self,
+        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        ops: NetworkOps,
+        gamma: float,
+        reg: Regularizer | None = None,
+        use_jax: bool = True,
+    ):
+        self._grad_f = nabla(loss_fn, use_jax)
+        self._prox_g: Callable[[float, NDArray[float64]], NDArray[float64]]
         self._ops = ops
         self._gamma = gamma
         self._aux_var: dict[str, NDArray[float64]] = {}
 
+        if reg is None:
+            self._prox_g = lambda tau, x: x
+        else:
+            self._prox_g = reg.prox
+
+    @abstractmethod
+    def init(self, x_i: NDArray[float64]) -> None: ...
+
+    @abstractmethod
+    def step(self, x_i: NDArray[float64]) -> NDArray[float64]: ...
+
     @classmethod
-    def create(
-        cls, loss_fn: LossFunction, ops: NetworkOps, gamma: float, key: str = "RAugDGM"
-    ) -> "Optimizer":
-        Subclass = cls._SUBCLASSES.get(key)
-        if Subclass is None:
-            raise ValueError(f"Algorithm '{key}' is not registered.")
-        return Subclass(loss_fn, ops, gamma)
+    def get_class(cls, name: str) -> Type["Optimizer"]:
+        """
+        Get the optimizer class by name.
 
-    @abstractmethod
-    def init(self, x_i: NDArray[float64]) -> None:
-        """Initialize the optimizer's auxiliary variables."""
-        ...
+        Parameters
+        ----------
+        name : str
+            Name of the optimizer class.
 
-    @abstractmethod
-    def step(self, x_i: NDArray[float64]) -> NDArray[float64]:
-        """Perform a single optimization step and return the updated variable."""
-        ...
+        Returns
+        -------
+        Type[Optimizer]
+            The optimizer class corresponding to the given name.
+
+        Raises
+        ------
+        ValueError
+            If the optimizer class with the given name is not found.
+        """
+        if name not in cls._registry:
+            err_msg = f"Optimizer class '{name}' not found."
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+
+        return cls._registry[name]
 
 
-class DGD(Optimizer, key="DGD"):
+class DGD(Optimizer):
     """
     Distributed Gradient Descent (DGD) algorithm.
     """
 
-    def __init__(self, loss_fn: LossFunction, ops: NetworkOps, gamma: float):
-        if loss_fn.g_type != "zero":
+    def __init__(
+        self,
+        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        ops: NetworkOps,
+        gamma: float,
+        reg: Regularizer | None = None,
+        use_jax: bool = True,
+    ):
+        if reg is not None:
             err_msg = "DGD only supports loss functions without regularization."
             logger.error(err_msg)
             raise ValueError(err_msg)
 
-        super().__init__(loss_fn, ops, gamma)
+        super().__init__(loss_fn, ops, gamma, reg, use_jax)
         self._k = 0
 
     def init(self, x_i: NDArray[float64]) -> None:
@@ -89,7 +132,7 @@ class DGD(Optimizer, key="DGD"):
     def step(self, x_i: NDArray[float64]) -> NDArray[float64]:
         w_x_i = self._ops.weighted_mix(x_i)
         gamma_bar = self._gamma / sqrt(self._k + 1)
-        grad = self._loss_fn.grad(x_i)
+        grad = self._grad_f(x_i)
 
         new_x_i = w_x_i - gamma_bar * grad
         self._k += 1
@@ -97,22 +140,32 @@ class DGD(Optimizer, key="DGD"):
         return new_x_i
 
 
-class EXTRA(Optimizer, key="EXTRA"):
-    def __init__(self, loss_fn: LossFunction, ops: NetworkOps, gamma: float):
-        super().__init__(loss_fn, ops, gamma)
+class EXTRA(Optimizer):
+    """
+    Exact First-Order Algorithm (EXTRA).
+    """
+
+    def __init__(
+        self,
+        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        ops: NetworkOps,
+        gamma: float,
+        reg: Regularizer | None = None,
+        use_jax: bool = True,
+    ):
+        super().__init__(loss_fn, ops, gamma, reg, use_jax)
 
     def init(self, x_i: NDArray[float64]) -> None:
         w_x_i = self._ops.weighted_mix(x_i)
-        self._aux_var["grad"] = self._loss_fn.grad(x_i)
+        self._aux_var["grad"] = self._grad_f(x_i)
         self._aux_var["new_z_i"] = w_x_i - self._gamma * self._aux_var["grad"]
 
     def step(self, x_i: NDArray[float64]) -> NDArray[float64]:
-        new_x_i = self._loss_fn.prox(self._gamma, self._aux_var["new_z_i"])
+        new_x_i = self._prox_g(self._gamma, self._aux_var["new_z_i"])
         p_i = self._aux_var["new_z_i"] + new_x_i - x_i
 
         w_p_i = self._ops.weighted_mix(p_i)
-        new_grad = self._loss_fn.grad(new_x_i)
-
+        new_grad = self._grad_f(new_x_i)
         diff_grad = new_grad - self._aux_var["grad"]
 
         new_new_z_i = 0.5 * (p_i + w_p_i) - self._gamma * diff_grad
@@ -123,17 +176,28 @@ class EXTRA(Optimizer, key="EXTRA"):
         return new_x_i
 
 
-class NIDS(Optimizer, key="NIDS"):
-    def __init__(self, loss_fn: LossFunction, ops: NetworkOps, gamma: float):
-        super().__init__(loss_fn, ops, gamma)
+class NIDS(Optimizer):
+    """
+    Network Independent Step-size (NIDS) algorithm.
+    """
+
+    def __init__(
+        self,
+        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        ops: NetworkOps,
+        gamma: float,
+        reg: Regularizer | None = None,
+        use_jax: bool = True,
+    ):
+        super().__init__(loss_fn, ops, gamma, reg, use_jax)
 
     def init(self, x_i: NDArray[float64]) -> None:
-        self._aux_var["s_i"] = x_i - self._gamma * self._loss_fn.grad(x_i)
+        self._aux_var["s_i"] = x_i - self._gamma * self._grad_f(x_i)
         self._aux_var["new_z_i"] = self._aux_var["s_i"].copy()
 
     def step(self, x_i: NDArray[float64]) -> NDArray[float64]:
-        new_x_i = self._loss_fn.prox(self._gamma, self._aux_var["new_z_i"])
-        new_s_i = new_x_i - self._gamma * self._loss_fn.grad(new_x_i)
+        new_x_i = self._prox_g(self._gamma, self._aux_var["new_z_i"])
+        new_s_i = new_x_i - self._gamma * self._grad_f(new_x_i)
 
         p_i = self._aux_var["new_z_i"] + new_s_i - self._aux_var["s_i"]
 
@@ -147,24 +211,35 @@ class NIDS(Optimizer, key="NIDS"):
         return new_x_i
 
 
-class DIGing(Optimizer, key="DIGing"):
-    def __init__(self, loss_fn: LossFunction, ops: NetworkOps, gamma: float):
-        if loss_fn.g_type != "zero":
+class DIGing(Optimizer):
+    """
+    Distributed Inexact Gradient and a gradient tracking algorithm (DIGing).
+    """
+
+    def __init__(
+        self,
+        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        ops: NetworkOps,
+        gamma: float,
+        reg: Regularizer | None = None,
+        use_jax: bool = True,
+    ):
+        if reg is not None:
             err_msg = "DIGing only supports loss functions without regularization."
             logger.error(err_msg)
             raise ValueError(err_msg)
 
-        super().__init__(loss_fn, ops, gamma)
+        super().__init__(loss_fn, ops, gamma, reg, use_jax)
 
     def init(self, x_i: NDArray[float64]) -> None:
-        self._aux_var["grad"] = self._loss_fn.grad(x_i)
+        self._aux_var["grad"] = self._grad_f(x_i)
         self._aux_var["y_i"] = self._aux_var["grad"].copy()
 
     def step(self, x_i: NDArray[float64]) -> NDArray[float64]:
         w_x_i = self._ops.weighted_mix(x_i)
 
         new_x_i = w_x_i - self._gamma * self._aux_var["y_i"]
-        new_grad = self._loss_fn.grad(new_x_i)
+        new_grad = self._grad_f(new_x_i)
 
         w_y_i = self._ops.weighted_mix(self._aux_var["y_i"])
 
@@ -176,19 +251,34 @@ class DIGing(Optimizer, key="DIGing"):
         return new_x_i
 
 
-class AugDGM(Optimizer, key="AugDGM"):
-    def __init__(self, loss_fn: LossFunction, ops: NetworkOps, gamma: float):
-        super().__init__(loss_fn, ops, gamma)
+class AugDGM(Optimizer):
+    """
+    Augmented Distributed Gradient Method (AugDGM) algorithm.
+
+    To make the algorithm compliant with the Adaptive-Then-Combine (ATC) framework,
+    where only the post-descent variable is required at each iteration,
+    we reformulate AugDGM into an equivalent form that differs from the one presented in the original paper.
+    """
+
+    def __init__(
+        self,
+        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        ops: NetworkOps,
+        gamma: float,
+        reg: Regularizer | None = None,
+        use_jax: bool = True,
+    ):
+        super().__init__(loss_fn, ops, gamma, reg, use_jax)
 
     def init(self, x_i: NDArray[float64]) -> None:
-        self._aux_var["s_i"] = x_i - self._gamma * self._loss_fn.grad(x_i)
+        self._aux_var["s_i"] = x_i - self._gamma * self._grad_f(x_i)
         self._aux_var["y_i"] = self._aux_var["s_i"].copy()
 
     def step(self, x_i: NDArray[float64]) -> NDArray[float64]:
         new_z_i = self._ops.weighted_mix(self._aux_var["y_i"])
 
-        new_x_i = self._loss_fn.prox(self._gamma, new_z_i)
-        new_s_i = new_x_i - self._gamma * self._loss_fn.grad(new_x_i)
+        new_x_i = self._prox_g(self._gamma, new_z_i)
+        new_s_i = new_x_i - self._gamma * self._grad_f(new_x_i)
 
         diff_s_i = new_s_i - self._aux_var["s_i"]
         p_i = diff_s_i - new_z_i
@@ -203,9 +293,20 @@ class AugDGM(Optimizer, key="AugDGM"):
         return new_x_i
 
 
-class RGT(Optimizer, key="RGT"):
-    def __init__(self, loss_fn: LossFunction, ops: NetworkOps, gamma: float):
-        super().__init__(loss_fn, ops, gamma)
+class RGT(Optimizer):
+    """
+    Robust Gradient Tracking (RGT) algorithm.
+    """
+
+    def __init__(
+        self,
+        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        ops: NetworkOps,
+        gamma: float,
+        reg: Regularizer | None = None,
+        use_jax: bool = True,
+    ):
+        super().__init__(loss_fn, ops, gamma, reg, use_jax)
 
     def init(self, x_i: NDArray[float64]) -> None:
         self._aux_var["y_i"] = zeros_like(x_i)
@@ -215,8 +316,8 @@ class RGT(Optimizer, key="RGT"):
 
         w_p_i = self._ops.weighted_mix(p_i)
 
-        new_z_i = w_p_i - self._gamma * self._loss_fn.grad(x_i) - self._aux_var["y_i"]
-        new_x_i = self._loss_fn.prox(self._gamma, new_z_i)
+        new_z_i = w_p_i - self._gamma * self._grad_f(x_i) - self._aux_var["y_i"]
+        new_x_i = self._prox_g(self._gamma, new_z_i)
 
         q_i = new_z_i - new_x_i + x_i
 
@@ -229,9 +330,20 @@ class RGT(Optimizer, key="RGT"):
         return new_x_i
 
 
-class WE(Optimizer, key="WE"):
-    def __init__(self, loss_fn: LossFunction, ops: NetworkOps, gamma: float):
-        super().__init__(loss_fn, ops, gamma)
+class WE(Optimizer):
+    """
+    Wang-Elia (WE) algorithm.
+    """
+
+    def __init__(
+        self,
+        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        ops: NetworkOps,
+        gamma: float,
+        reg: Regularizer | None = None,
+        use_jax: bool = True,
+    ):
+        super().__init__(loss_fn, ops, gamma, reg, use_jax)
 
     def init(self, x_i: NDArray[float64]) -> None:
         self._aux_var["y_i"] = zeros_like(x_i)
@@ -241,8 +353,8 @@ class WE(Optimizer, key="WE"):
 
         w_p_i = self._ops.weighted_mix(p_i)
 
-        new_z_i = w_p_i - self._gamma * self._loss_fn.grad(x_i) - self._aux_var["y_i"]
-        new_x_i = self._loss_fn.prox(self._gamma, new_z_i)
+        new_z_i = w_p_i - self._gamma * self._grad_f(x_i) - self._aux_var["y_i"]
+        new_x_i = self._prox_g(self._gamma, new_z_i)
 
         q_i = new_z_i - new_x_i + x_i
 
@@ -255,13 +367,24 @@ class WE(Optimizer, key="WE"):
         return new_x_i
 
 
-class RAugDGM(Optimizer, key="RAugDGM"):
-    def __init__(self, loss_fn: LossFunction, ops: NetworkOps, gamma: float):
-        super().__init__(loss_fn, ops, gamma)
+class RAugDGM(Optimizer):
+    """
+    Robust Augmented Distributed Gradient Method (RAugDGM) algorithm.
+    """
+
+    def __init__(
+        self,
+        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        ops: NetworkOps,
+        gamma: float,
+        reg: Regularizer | None = None,
+        use_jax: bool = True,
+    ):
+        super().__init__(loss_fn, ops, gamma, reg, use_jax)
 
     def init(self, x_i: NDArray[float64]) -> None:
         self._aux_var["y_i"] = zeros_like(x_i)
-        self._aux_var["s_i"] = x_i - self._gamma * self._loss_fn.grad(x_i)
+        self._aux_var["s_i"] = x_i - self._gamma * self._grad_f(x_i)
 
     def step(self, x_i: NDArray[float64]) -> NDArray[float64]:
         p_i = self._aux_var["s_i"] + self._aux_var["y_i"]
@@ -269,8 +392,8 @@ class RAugDGM(Optimizer, key="RAugDGM"):
         w_p_i = self._ops.weighted_mix(p_i)
 
         new_z_i = w_p_i - self._aux_var["y_i"]
-        new_x_i = self._loss_fn.prox(self._gamma, new_z_i)
-        new_s_i = new_x_i - self._gamma * self._loss_fn.grad(new_x_i)
+        new_x_i = self._prox_g(self._gamma, new_z_i)
+        new_s_i = new_x_i - self._gamma * self._grad_f(new_x_i)
 
         q_i = new_z_i - new_s_i + self._aux_var["s_i"]
 
@@ -284,13 +407,24 @@ class RAugDGM(Optimizer, key="RAugDGM"):
         return new_x_i
 
 
-class AtcWE(Optimizer, key="AtcWE"):
-    def __init__(self, loss_fn: LossFunction, ops: NetworkOps, gamma: float):
-        super().__init__(loss_fn, ops, gamma)
+class AtcWE(Optimizer):
+    """
+    Adaptive-Then-Combine Wang-Elia (AtcWE) algorithm.
+    """
+
+    def __init__(
+        self,
+        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        ops: NetworkOps,
+        gamma: float,
+        reg: Regularizer | None = None,
+        use_jax: bool = True,
+    ):
+        super().__init__(loss_fn, ops, gamma, reg, use_jax)
 
     def init(self, x_i: NDArray[float64]) -> None:
         self._aux_var["y_i"] = zeros_like(x_i)
-        self._aux_var["s_i"] = x_i - self._gamma * self._loss_fn.grad(x_i)
+        self._aux_var["s_i"] = x_i - self._gamma * self._grad_f(x_i)
 
     def step(self, x_i: NDArray[float64]) -> NDArray[float64]:
         p_i = self._aux_var["s_i"] + self._aux_var["y_i"]
@@ -298,8 +432,8 @@ class AtcWE(Optimizer, key="AtcWE"):
         w_p_i = self._ops.weighted_mix(p_i)
 
         new_z_i = w_p_i - self._aux_var["y_i"]
-        new_x_i = self._loss_fn.prox(self._gamma, new_z_i)
-        new_s_i = new_x_i - self._gamma * self._loss_fn.grad(new_x_i)
+        new_x_i = self._prox_g(self._gamma, new_z_i)
+        new_s_i = new_x_i - self._gamma * self._grad_f(new_x_i)
 
         q_i = new_z_i - new_s_i + self._aux_var["s_i"]
 
@@ -311,3 +445,6 @@ class AtcWE(Optimizer, key="AtcWE"):
         self._aux_var["y_i"] = new_y_i
 
         return new_x_i
+
+
+__all__ = ["DGD", "EXTRA", "NIDS", "DIGing", "AugDGM", "RGT", "WE", "RAugDGM", "AtcWE"]

@@ -6,6 +6,8 @@ from numpy.typing import NDArray
 class NetworkOps(Protocol):
     """
     Protocol for communication operations in distributed optimization.
+    In our examples, we use 'topolink.NodeHandle' as a concrete implementation of this protocol.
+    However, any class that implements these methods and properties can be used as long as it adheres to this protocol.
 
     Attributes
     ----------
@@ -27,10 +29,10 @@ class NetworkOps(Protocol):
         Broadcasts the given state to all neighbor nodes.
 
     gather() -> dict[str, NDArray[float64]]
-        Gathers data from all neighbors.
+        Gathers states from all neighbors.
 
     weighted_gather() -> dict[str, NDArray[float64]]
-        Gathers data from all neighbors, applying corresponding weights to each received array.
+        Gathers states from all neighbors, applying corresponding weights to each received array.
 
     laplacian(state: NDArray[float64]) -> NDArray[float64]
         Compute the Laplacian of the input state across neighboring nodes.

@@ -1,4 +1,5 @@
 from .optimizer import Optimizer
-from .loss_function import LossFunction
+from .regularizer import Regularizer
+from ._network import NetworkOps
 
-__all__ = ["Optimizer", "LossFunction"]
+__all__ = ["Optimizer", "Regularizer", "NetworkOps"]

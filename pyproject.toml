@@ -13,13 +13,13 @@ authors = [
 ]
 
 dependencies = [
-    "autograd>=1.7.0",
+    "jax>=0.5.3",
     "topolink @ git+https://github.com/rui-huang-opt/topolink.git@0.1.9",
 ]
 
 [project.optional-dependencies]
 exp = ["cvxpy[ECOS]>=1.6.3"]
-jax = ["jax>=0.5.3"]
+autograd = ["autograd>=1.7.0"]
 vsc = ["ipykernel>=6.29.5"]
 
 [tool.setuptools.packages.find]

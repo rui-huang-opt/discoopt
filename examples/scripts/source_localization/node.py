@@ -41,19 +41,7 @@ basicConfig(level=INFO)
 import jax.numpy as jnp
 from jax import Array
 
-step_sizes = {
-    "RAugDGM": 0.085,
-    "AtcWE": 0.061,
-    "WE": 0.050,
-    "RGT": 0.039,
-    "EXTRA": 0.051,
-    "NIDS": 0.061,
-    "DIGing": 0.039,
-    "AugDGM": 0.085,
-}
-
-algorithm = "RAugDGM"
-gamma = step_sizes[algorithm]
+gamma = 0.085
 max_iter = 7000
 meas_i = meas[:, int(node_id) - 1]
 sens_loc_i = sens_loc[:, int(node_id) - 1]
@@ -70,10 +58,9 @@ from topolink import NodeHandle
 
 nh = NodeHandle(name=node_id)
 
-from discoopt import LossFunction, Optimizer
+from discoopt.optimizer import RAugDGM
 
-loss_fn = LossFunction(f, backend="jax")
-optimizer = Optimizer.create(loss_fn, nh, gamma, algorithm)
+optimizer = RAugDGM(f, nh, gamma)
 
 theta_i = np.zeros(2)
 
