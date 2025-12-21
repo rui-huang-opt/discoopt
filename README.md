@@ -1,11 +1,11 @@
 # Distributed Composite Optimization (DisCoOpt)
-Distributed Composite Optimization (DCO) is a Python package for solving composite optimization problems of the form
+Distributed Composite Optimization (DisCoOpt) is a Python package for solving composite optimization problems of the form
 
 $$
 \min_{x \in \mathbb{R}^d} \quad \frac{1}{n} \sum_{i=1}^n f_i(x) + g(x),
 $$
 
-where each $f_i: \mathbb{R}^d \rightarrow \mathbb{R}$ is a smooth loss function associated with a local dataset or agent, and $g(x)$ is a (possibly non-smooth) regularization term. DCO enables efficient and robust distributed optimization across multiple nodes, making it suitable for federated learning, multi-agent systems, and large-scale machine learning tasks.
+where each $f_i: \mathbb{R}^d \rightarrow \mathbb{R}$ is a smooth loss function associated with a local dataset or agent, and $g(x)$ is a (possibly non-smooth) regularization term. DisCoOpt enables efficient and robust distributed optimization across multiple nodes, making it suitable for federated learning, multi-agent systems, and large-scale machine learning tasks.
 
 This package contains the experimental code for the paper *A Unified Framework for Robust Distributed Optimization under Bounded Disturbances*.
 
@@ -26,13 +26,13 @@ Or, for development:
 
 ```bash
 git clone https://github.com/rui-huang-opt/discoopt.git
-cd dco
+cd discoopt
 pip install -e .
 ```
 
 ## Usage Example
 
-The typical workflow of DCO consists of two main steps:
+The typical workflow of DisCoOpt consists of two main steps:
 
 1. **Defining the network topology**: Specify the communication structure among nodes in the distributed system.
 2. **Defining the local problem at each node**: Set up the local objective function and related parameters for each node individually.
