@@ -5,7 +5,7 @@ from jax import Array
 
 
 def nabla(
-    f: Callable[[NDArray[float64]], NDArray[float64] | Array], use_jax: bool
+    f: Callable[[NDArray[float64]], float | NDArray[float64] | Array], use_jax: bool
 ) -> Callable[[NDArray[float64]], NDArray[float64]]:
     """
     Returns a gradient function for the given function f using either JAX or Autograd.
