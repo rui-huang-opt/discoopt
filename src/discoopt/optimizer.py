@@ -54,7 +54,7 @@ class Optimizer(metaclass=ABCMeta):
 
     def __init__(
         self,
-        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        loss_fn: Callable[[NDArray[float64]], float | NDArray[float64] | Array],
         ops: NetworkOps,
         gamma: float,
         reg: Regularizer | None = None,
@@ -117,7 +117,7 @@ class DGD(Optimizer):
 
     def __init__(
         self,
-        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        loss_fn: Callable[[NDArray[float64]], float | NDArray[float64] | Array],
         ops: NetworkOps,
         gamma: float,
         reg: Regularizer | None = None,
@@ -157,7 +157,7 @@ class EXTRA(Optimizer):
 
     def __init__(
         self,
-        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        loss_fn: Callable[[NDArray[float64]], float | NDArray[float64] | Array],
         ops: NetworkOps,
         gamma: float,
         reg: Regularizer | None = None,
@@ -198,7 +198,7 @@ class NIDS(Optimizer):
 
     def __init__(
         self,
-        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        loss_fn: Callable[[NDArray[float64]], float | NDArray[float64] | Array],
         ops: NetworkOps,
         gamma: float,
         reg: Regularizer | None = None,
@@ -238,7 +238,7 @@ class DIGing(Optimizer):
 
     def __init__(
         self,
-        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        loss_fn: Callable[[NDArray[float64]], float | NDArray[float64] | Array],
         ops: NetworkOps,
         gamma: float,
         reg: Regularizer | None = None,
@@ -287,7 +287,7 @@ class AugDGM(Optimizer):
 
     def __init__(
         self,
-        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        loss_fn: Callable[[NDArray[float64]], float | NDArray[float64] | Array],
         ops: NetworkOps,
         gamma: float,
         reg: Regularizer | None = None,
@@ -330,7 +330,7 @@ class RGT(Optimizer):
 
     def __init__(
         self,
-        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        loss_fn: Callable[[NDArray[float64]], float | NDArray[float64] | Array],
         ops: NetworkOps,
         gamma: float,
         reg: Regularizer | None = None,
@@ -372,7 +372,7 @@ class WE(Optimizer):
 
     def __init__(
         self,
-        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        loss_fn: Callable[[NDArray[float64]], float | NDArray[float64] | Array],
         ops: NetworkOps,
         gamma: float,
         reg: Regularizer | None = None,
@@ -411,7 +411,7 @@ class RAugDGM(Optimizer):
 
     def __init__(
         self,
-        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        loss_fn: Callable[[NDArray[float64]], float | NDArray[float64] | Array],
         ops: NetworkOps,
         gamma: float,
         reg: Regularizer | None = None,
@@ -453,7 +453,7 @@ class AtcWE(Optimizer):
 
     def __init__(
         self,
-        loss_fn: Callable[[NDArray[float64]], NDArray[float64] | Array],
+        loss_fn: Callable[[NDArray[float64]], float | NDArray[float64] | Array],
         ops: NetworkOps,
         gamma: float,
         reg: Regularizer | None = None,
