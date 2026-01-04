@@ -81,6 +81,9 @@ class Optimizer(metaclass=ABCMeta):
     def get_class(cls, name: str) -> Type["Optimizer"]:
         """
         Get the optimizer class by name.
+        This is not a recommended way to create optimizers.
+        Use the specific optimizer class directly instead.
+        Here is provided for convenience for benchmarking and testing purposes.
 
         Parameters
         ----------

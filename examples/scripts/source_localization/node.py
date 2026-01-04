@@ -58,7 +58,7 @@ from topolink import NodeHandle
 
 nh = NodeHandle(name=node_id)
 
-from discoopt.optimizer import RAugDGM
+from discoopt import RAugDGM
 
 optimizer = RAugDGM(f, nh, gamma)
 

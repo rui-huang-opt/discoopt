@@ -42,7 +42,7 @@ from topolink import NodeHandle
 
 nh = NodeHandle(name=node_id)
 
-from discoopt.optimizer import AugDGM
+from discoopt import AugDGM
 
 optimizer = AugDGM(f, nh, gamma)
 
