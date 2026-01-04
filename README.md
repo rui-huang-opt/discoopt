@@ -7,7 +7,7 @@ $$
 
 where each $f_i: \mathbb{R}^d \rightarrow \mathbb{R}$ is a smooth loss function associated with a local dataset or agent, and $g_i(x)$ is a (possibly non-smooth) regularization term. DisCoOpt enables efficient and robust distributed optimization across multiple nodes, making it suitable for federated learning, multi-agent systems, and large-scale machine learning tasks.
 
-This package contains the experimental code for the paper *A Unified Framework for Robust Distributed Optimization under Bounded Disturbances*.
+This package contains the experimental code for the paper [*A Unified Framework for Robust Distributed Optimization under Bounded Disturbances*](https://ieeexplore.ieee.org/abstract/document/11178647).
 
 ## Features
 
