@@ -14,7 +14,7 @@ authors = [
 
 dependencies = [
     "jax>=0.5.3",
-    "topolink @ git+https://github.com/rui-huang-opt/topolink.git@0.2.0",
+    "topolink @ git+https://github.com/rui-huang-opt/topolink.git@0.2.1",
 ]
 
 [project.optional-dependencies]
