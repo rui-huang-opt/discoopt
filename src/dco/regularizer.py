@@ -1,5 +1,6 @@
-import numpy as np
 from typing import Protocol
+
+import numpy as np
 from numpy.linalg import norm
 from numpy.typing import NDArray
 
