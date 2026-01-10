@@ -8,19 +8,32 @@ class Regularizer(Protocol):
     """
     Protocol for regularizer functions used in optimization.
     Includes methods for evaluating the regularizer and computing its proximal operator.
-
-    Methods
-    -------
-    __call__(x: NDArray[np.float64]) -> float
-        Evaluate the regularizer at the given point.
-
-    prox(tau: float, x: NDArray[np.float64]) -> NDArray[np.float64]
-        Compute the proximal operator of the regularizer.
     """
 
-    def __call__(self, x: NDArray[np.float64]) -> float: ...
+    def __call__(self, x: NDArray[np.float64]) -> float:
+        """
+        Evaluate the regularizer at the given point.
 
-    def prox(self, tau: float, x: NDArray[np.float64]) -> NDArray[np.float64]: ...
+        Args:
+            x (NDArray[np.float64]): The input array.
+
+        Returns:
+            float: The value of the regularizer at x.
+        """
+        ...
+
+    def prox(self, tau: float, x: NDArray[np.float64]) -> NDArray[np.float64]:
+        """
+        Compute the proximal operator of the regularizer.
+
+        Args:
+            tau (float): The step size parameter.
+            x (NDArray[np.float64]): The input array.
+
+        Returns:
+            NDArray[np.float64]: The result of the proximal operator.
+        """
+        ...
 
 
 class L1:
@@ -75,6 +88,11 @@ class WeightedL1:
 class L2:
     """
     L2 regularizer.
+
+    Parameters
+    ----------
+    lam : float
+        Regularization parameter.
     """
 
     def __init__(self, lam: float):
@@ -94,6 +112,11 @@ class L2:
 class SquaredL2:
     """
     Squared L2 regularizer.
+
+    Parameters
+    ----------
+    lam : float
+        Regularization parameter.
     """
 
     def __init__(self, lam: float):

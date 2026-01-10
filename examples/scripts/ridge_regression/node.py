@@ -46,7 +46,7 @@ from topolink import NodeHandle
 
 nh = NodeHandle(args.node_id)
 
-from discoopt import AugDGM
+from dco import AugDGM
 
 optimizer = AugDGM(f, nh, args.gamma)
 

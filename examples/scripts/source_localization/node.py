@@ -63,7 +63,7 @@ from topolink import NodeHandle
 
 nh = NodeHandle(args.node_id)
 
-from discoopt import RAugDGM
+from dco import RAugDGM
 
 optimizer = RAugDGM(f, nh, args.gamma)
 theta_i = np.zeros(2)

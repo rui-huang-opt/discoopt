@@ -33,14 +33,6 @@ class Optimizer(metaclass=ABCMeta):
     use_jax : bool, optional
         Whether to use JAX for automatic differentiation. If False, Autograd will be used. Default is True.
 
-    Methods
-    -------
-    init(x_i: NDArray[float64]) -> None
-        Initialize the optimizer's auxiliary variables.
-
-    step(x_i: NDArray[float64]) -> NDArray[float64]
-        Perform a single optimization step and return the updated variable.
-
     Notes
     -----
     This is an abstract base class. Specific optimization algorithms should inherit from this class and implement the `init` and `step` methods.
@@ -72,10 +64,27 @@ class Optimizer(metaclass=ABCMeta):
             self._prox_g = reg.prox
 
     @abstractmethod
-    def init(self, x_i: NDArray[float64]) -> None: ...
+    def init(self, x_i: NDArray[float64]) -> None:
+        """
+        Initialize the optimizer's auxiliary variables.
+
+        Args:
+            x_i (NDArray[float64]): The initial local variable.
+        """
+        ...
 
     @abstractmethod
-    def step(self, x_i: NDArray[float64]) -> NDArray[float64]: ...
+    def step(self, x_i: NDArray[float64]) -> NDArray[float64]:
+        """
+        Perform a single optimization step.
+
+        Args:
+            x_i (NDArray[float64]): The current local variable.
+
+        Returns:
+            NDArray[float64]: The updated local variable after the optimization step.
+        """
+        ...
 
     @classmethod
     def get_class(cls, name: str) -> Type["Optimizer"]:
