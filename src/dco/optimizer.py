@@ -525,6 +525,7 @@ class AtcWE(Optimizer):
 
 
 __all__ = [
+    "register_optimizer",
     "get_optimizer",
     "list_optimizers",
     "DGD",
