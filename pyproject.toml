@@ -18,9 +18,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-exp = ["cvxpy[ECOS]>=1.6.3", "matplotlib>=3.10.3"]
+examples = [
+    "cvxpy[ECOS]>=1.6.3",
+    "matplotlib>=3.10.3",
+    "networkx>=3.4.2",
+    "dask[distributed]>=2026.1.2",
+]
 autograd = ["autograd>=1.7.0"]
-vsc = ["ipykernel>=6.29.5"]
+notebook = ["ipykernel>=6.29.5"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
