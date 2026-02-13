@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Protocol, Sequence
 
 import numpy as np
 from numpy.linalg import norm
@@ -180,4 +180,36 @@ class NonNegative:
         return np.maximum(x, 0)
 
 
-__all__ = ["L1", "WeightedL1", "L2", "SquaredL2", "Box", "NonNegative"]
+class GroupLasso:
+    """
+    Group Lasso regularizer: lam * sum_g ||x_g||_2
+    """
+
+    def __init__(self, lam: float, groups: Sequence[Sequence[int]]):
+        self._lam = float(lam)
+        self._groups: list[NDArray[np.int_]] = [
+            np.asarray(g, dtype=int) for g in groups
+        ]
+
+    def __call__(self, x: NDArray[np.float64]) -> float:
+        val = 0.0
+        for g in self._groups:
+            val += norm(x[g], ord=2)
+        return float(self._lam * val)
+
+    def prox(self, tau: float, x: NDArray[np.float64]) -> NDArray[np.float64]:
+        y = x.copy()
+        thresh = tau * self._lam
+
+        for g in self._groups:
+            v = y[g]
+            nv = norm(v, ord=2)
+            if nv <= thresh:
+                y[g] = 0.0
+            else:
+                y[g] = (1.0 - thresh / nv) * v
+
+        return y
+
+
+__all__ = ["L1", "WeightedL1", "L2", "SquaredL2", "Box", "NonNegative", "GroupLasso"]

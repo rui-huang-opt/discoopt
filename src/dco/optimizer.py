@@ -382,11 +382,9 @@ class RGT(Optimizer):
         new_z_i = w_p_i - self._gamma * self._grad_f(x_i) - self._aux_var["y_i"]
         new_x_i = self._prox_g(self._gamma, new_z_i)
 
-        q_i = new_z_i - new_x_i + x_i
+        w_x_i = self._ops.weighted_mix(x_i)
 
-        w_q_i = self._ops.weighted_mix(q_i)
-
-        new_y_i = self._aux_var["y_i"] - w_q_i + new_z_i
+        new_y_i = self._aux_var["y_i"] - w_x_i + new_x_i
 
         self._aux_var["y_i"] = new_y_i
 
@@ -427,9 +425,9 @@ class WE(Optimizer):
 
         q_i = new_z_i - new_x_i + x_i
 
-        w_q_i = self._ops.weighted_mix(q_i)
+        w_x_i = self._ops.weighted_mix(x_i)
 
-        new_y_i = self._aux_var["y_i"] - w_q_i + q_i
+        new_y_i = self._aux_var["y_i"] - w_x_i + x_i
 
         self._aux_var["y_i"] = new_y_i
 
@@ -467,11 +465,11 @@ class RAugDGM(Optimizer):
         new_x_i = self._prox_g(self._gamma, new_z_i)
         new_s_i = new_x_i - self._gamma * self._grad_f(new_x_i)
 
-        q_i = new_z_i - new_s_i + self._aux_var["s_i"]
+        q_i = new_x_i - new_s_i + self._aux_var["s_i"]
 
         w_q_i = self._ops.weighted_mix(q_i)
 
-        new_y_i = self._aux_var["y_i"] - w_q_i + new_z_i
+        new_y_i = self._aux_var["y_i"] - w_q_i + new_x_i
 
         self._aux_var["s_i"] = new_s_i
         self._aux_var["y_i"] = new_y_i
@@ -510,7 +508,7 @@ class AtcWE(Optimizer):
         new_x_i = self._prox_g(self._gamma, new_z_i)
         new_s_i = new_x_i - self._gamma * self._grad_f(new_x_i)
 
-        q_i = new_z_i - new_s_i + self._aux_var["s_i"]
+        q_i = new_x_i - new_s_i + self._aux_var["s_i"]
 
         w_q_i = self._ops.weighted_mix(q_i)
 
