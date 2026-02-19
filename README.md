@@ -57,12 +57,12 @@ Below are code templates for both steps
 ### 1. Specify the network topology (mixing matrix $W$) on the server
 
 The server only assists nodes in establishing connections to form an undirected graph network. It does not participate in communication during computation.
-For more details, please refer to the [`topolink`](https://github.com/rui-huang-opt/topolink) repository.
+For more details, please refer to the [`conops`](https://github.com/rui-huang-opt/conops) repository.
 
 ```python
 import numpy as np
 from logging import basicConfig, INFO
-from topolink import Graph, bootstrap
+from conops import Graph, bootstrap
 
 basicConfig(level=INFO)
 
@@ -124,7 +124,7 @@ def f_i(x_i: NDArray[np.float64]) -> NDArray[np.float64]:
 
 
 # Network handle
-from topolink import NodeHandle
+from conops import NodeHandle
 
 nh = NodeHandle(node_id)
 
