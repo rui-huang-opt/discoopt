@@ -1,6 +1,6 @@
 from logging import getLogger
 from abc import ABCMeta, abstractmethod
-from typing import Callable, Type
+from typing import Callable
 
 from numpy import sqrt, float64, zeros_like
 from numpy.typing import NDArray
@@ -11,58 +11,6 @@ from .network import NetworkOps
 from .regularizer import Regularizer
 
 logger = getLogger("dco.optimizer")
-
-_REGISTRY: dict[str, Type["Optimizer"]] = {}
-
-
-def register_optimizer(cls: Type["Optimizer"]) -> Type["Optimizer"]:
-    """
-    Register an optimizer class in the global registry.
-
-    Args:
-        cls (Type["Optimizer"]): The optimizer class to register.
-
-    Returns:
-        Type["Optimizer"]: The registered optimizer class.
-    """
-    name = cls.__name__
-
-    if name in _REGISTRY:
-        err_msg = f"An optimizer with the name '{name}' is already registered."
-        logger.error(err_msg)
-        raise ValueError(err_msg)
-
-    _REGISTRY[name] = cls
-
-    return cls
-
-
-def get_optimizer(name: str) -> Type["Optimizer"]:
-    """
-    Retrieve an optimizer class from the global registry by name.
-
-    Args:
-        name (str): The name of the optimizer class to retrieve.
-
-    Returns:
-        Type["Optimizer"]: The optimizer class associated with the given name.
-    """
-    if name not in _REGISTRY:
-        err_msg = f"No optimizer registered under the name '{name}'."
-        logger.error(err_msg)
-        raise ValueError(err_msg)
-
-    return _REGISTRY[name]
-
-
-def list_optimizers() -> tuple[str, ...]:
-    """
-    List all registered optimizer names.
-
-    Returns:
-        tuple[str, ...]: A tuple containing the names of all registered optimizers.
-    """
-    return tuple(_REGISTRY.keys())
 
 
 class Optimizer(metaclass=ABCMeta):
@@ -134,7 +82,6 @@ class Optimizer(metaclass=ABCMeta):
         ...
 
 
-@register_optimizer
 class DGD(Optimizer):
     """
     Distributed Gradient Descent (DGD) algorithm.
@@ -175,7 +122,6 @@ class DGD(Optimizer):
         return new_x_i
 
 
-@register_optimizer
 class EXTRA(Optimizer):
     """
     Exact First-Order Algorithm (EXTRA).
@@ -217,7 +163,6 @@ class EXTRA(Optimizer):
         return new_x_i
 
 
-@register_optimizer
 class NIDS(Optimizer):
     """
     Network Independent Step-size (NIDS) algorithm.
@@ -258,7 +203,6 @@ class NIDS(Optimizer):
         return new_x_i
 
 
-@register_optimizer
 class DIGing(Optimizer):
     """
     Distributed Inexact Gradient and a gradient tracking algorithm (DIGing).
@@ -303,7 +247,6 @@ class DIGing(Optimizer):
         return new_x_i
 
 
-@register_optimizer
 class AugDGM(Optimizer):
     """
     Augmented Distributed Gradient Method (AugDGM) algorithm.
@@ -350,7 +293,6 @@ class AugDGM(Optimizer):
         return new_x_i
 
 
-@register_optimizer
 class RGT(Optimizer):
     """
     Robust Gradient Tracking (RGT) algorithm.
@@ -391,7 +333,6 @@ class RGT(Optimizer):
         return new_x_i
 
 
-@register_optimizer
 class WE(Optimizer):
     """
     Wang-Elia (WE) algorithm.
@@ -423,8 +364,6 @@ class WE(Optimizer):
         new_z_i = w_p_i - self._gamma * self._grad_f(x_i) - self._aux_var["y_i"]
         new_x_i = self._prox_g(self._gamma, new_z_i)
 
-        q_i = new_z_i - new_x_i + x_i
-
         w_x_i = self._ops.weighted_mix(x_i)
 
         new_y_i = self._aux_var["y_i"] - w_x_i + x_i
@@ -434,7 +373,6 @@ class WE(Optimizer):
         return new_x_i
 
 
-@register_optimizer
 class RAugDGM(Optimizer):
     """
     Robust Augmented Distributed Gradient Method (RAugDGM) algorithm.
@@ -477,7 +415,6 @@ class RAugDGM(Optimizer):
         return new_x_i
 
 
-@register_optimizer
 class AtcWE(Optimizer):
     """
     Adaptive-Then-Combine Wang-Elia (AtcWE) algorithm.
@@ -521,9 +458,7 @@ class AtcWE(Optimizer):
 
 
 __all__ = [
-    "register_optimizer",
-    "get_optimizer",
-    "list_optimizers",
+    "Optimizer",
     "DGD",
     "EXTRA",
     "NIDS",
