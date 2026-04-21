@@ -14,7 +14,7 @@ authors = [
 
 dependencies = [
     "jax>=0.5.3",
-    "conops @ git+https://github.com/rui-huang-opt/conops.git@0.1.0",
+    "conops @ git+https://github.com/rui-huang-opt/conops.git@0.2.0",
 ]
 
 [project.optional-dependencies]
@@ -22,7 +22,7 @@ examples = [
     "cvxpy[ECOS]>=1.6.3",
     "matplotlib>=3.10.3",
     "networkx>=3.4.2",
-    "ray[default]>=2.53.0",
+    "ray[default]==2.54.1",
 ]
 autograd = ["autograd>=1.7.0"]
 notebook = ["ipykernel>=6.29.5"]
