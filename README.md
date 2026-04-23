@@ -33,18 +33,13 @@ pip install -e .
 
 ## Usage Example
 
-The typical workflow of DisCoOpt consists of two main steps:
-
-1. **Defining the network topology**: Specify the communication structure among nodes in the distributed system.
-2. **Defining the local problem at each node**: Set up the local objective function and related parameters for each node individually.
-
-The following example demonstrates distributed ridge regression, where each node solves a local least squares problem with $\ell_2$ regularization:
+This example demonstrates distributed ridge regression, where each node solves a local least squares problem with $\ell_2$ regularization:
 
 $$
 \min_{x \in \mathbb{R}^d} \quad \frac{1}{4} \sum_{i = 1}^4 (u_i^\top x - v_i)^2 + \rho \| x \|^2.
 $$
 
-The distributed ridge regression problem can be efficiently addressed using the `EXTRA` (**EX**act firs**T**-orde**R** **A**lgorithm) [[1]](#references):
+We use the `EXTRA` (**EX**act firs**T**-orde**R** **A**lgorithm) [[1]](#references) to solve this problem:
 
 $$
 \mathbf{x}^{k + 2} = (I + W) \mathbf{x}^{k + 1} - \frac{I + W}{2} \mathbf{x}^k - \gamma \big(\nabla f(\mathbf{x}^{k + 1}) - \nabla f(\mathbf{x}^{k})\big),
@@ -52,62 +47,32 @@ $$
 
 where $W$ is a symmetric mixing matrix determined by the network topology.
 
-Below are code templates for both steps
-
-### 1. Specify the network topology (mixing matrix $W$) on the server
-
-The server only assists nodes in establishing connections to form an undirected graph network. It does not participate in communication during computation.
-For more details, please refer to the [`conops`](https://github.com/rui-huang-opt/conops) repository.
-
-```python
-import numpy as np
-from logging import basicConfig, INFO
-from conops import Graph, bootstrap
-
-basicConfig(level=INFO)
-
-L = np.array([[2, -1, 0, -1], [-1, 2, -1, 0], [0, -1, 2, -1], [-1, 0, -1, 2]])
-W = np.eye(4) - L * 0.2
-
-graph = Graph.from_mixing_matrix(W)
-
-bootstrap(graph)
-
-```
-
-### 2. Define the local optimization problem at each node
-Each node specifies its own data and parameters, such as the local feature vector `u_i`, target value `v_i`, regularization parameter `rho`, and the optimization step size.
-The local objective function `f_i(x_i)` is defined using these parameters as
+Each node defines its own local data and optimization parameters, including the feature vector `u_i`, target value `v_i`, regularization parameter `rho`, and step size.
+The local objective function at node $i$ is
 
 $$
-f_i(x_i) = (u_i^\top x_i - v_i)^2 + \rho \| x_i \|^2.
+f_i(x_i) = (u_i^\top x_i - v_i)^2 + \rho \|x_i\|^2.
 $$
 
-The `LocalObjective` class allows you to specify the smooth part of the objective, and you can set the `g_type` parameter to include different types of regularization, such as `"zero"` (no regularization, default value), `"l1"` (L1 regularization), or others as needed.
-The `Optimizer` class is then used to set up and solve the optimization problem.
-
-We use the `EXTRA` [[1]](#references) algorithm as an example here.
-The package also implements several other distributed optimization algorithms, including:
+In the following example, we use the `EXTRA` [[1]](#references) algorithm.
+Other supported algorithms include:
 
 - `DGD` (**D**istributed **G**radient **D**escent) [[2]](#references)
 - `NIDS` (**N**etwork **I**n**D**ependent **S**tep-size) [[3]](#references)
-- `DIGing` (**D**istributed **I**nexact **G**radient method and a gradient track**ing**) [[4]](#references)
-- `AugDGM` (**Aug**mented **D**istributed **G**radient **M**ethods) [[5]](#references)
+- `DIGing` (**D**istributed **I**nexact **G**radient method with gradient track**ing**) [[4]](#references)
+- `AugDGM` (**Aug**mented **D**istributed **G**radient **M**ethod) [[5]](#references)
 - `WE` (**W**ang-**E**lia) [[6]](#references)
 - `RGT` (**R**obust **G**radient **T**racking) [[7]](#references)
+- `RAugDGM`: a robust variant of `AugDGM` and the `ATC` (**A**dapt-**T**hen-**C**ombine) variant of `RGT`
+- `AtcWE`: the `ATC` variant of `WE`
 
-In addition, the package includes two original algorithms proposed in our paper:
-
-- `RAugDGM`: A robust version of `AugDGM` algorithm and the `ATC` (**A**dapt-**T**hen-**C**ombine) versionl of `RGT` algorithm.
-- `AtcWE`: The `ATC` version of `WE` algorithm.
-
-You can select the algorithm by setting the `algorithm` parameter in the `Optimizer.create` method. If you do not specify the `algorithm` parameter, the default algorithm used is `"RAugDGM"`.
-Please fill in the details of the additional algorithms as needed.
+Algorithms are selected explicitly by importing the corresponding optimizer class. For example:
 
 ```python
-# Distributed optimization example
 import numpy as np
 from numpy.typing import NDArray
+from conops import NodeHandle
+from discoopt import EXTRA
 
 # Node-specific data (replace with your own)
 node_id = "1"
@@ -117,37 +82,61 @@ rho = 0.1
 dimension = 3
 step_size = 0.01
 
+# Neighbor weights for this node
+neighbors: dict[str, float] = {
+    "2": 0.2,
+    "4": 0.2,
+}
 
-# Define loss function
 def f_i(x_i: NDArray[np.float64]) -> NDArray[np.float64]:
-    return (u_i @ x_i - v_i) ** 2 + rho * x_i @ x_i
+    return (u_i @ x_i - v_i) ** 2 + rho * (x_i @ x_i)
 
-
-# Network handle
-from conops import NodeHandle
-
-nh = NodeHandle(node_id)
-
-# Optimizer setup
-from discoopt import EXTRA
-
+nh = NodeHandle(node_id, neighbors)
 optimizer = EXTRA(f_i, nh, step_size)
 
 x_i = np.zeros(dimension)
-
-# Initialize optimizer (sets up internal variables using x_i)
 optimizer.init(x_i)
 
-# Optimization loop
 for k in range(500):
     x_i = optimizer.step(x_i)
     print(f"Step {k}, x_{node_id} = {x_i}")
 ```
 
-### Running Distributed Algorithms with Multiple Processes on a Single Machine
+### Optional: construct `neighbors` from the mixing matrix $W$
 
-If you do not have access to multiple machines, you can still experiment with and test distributed optimization algorithms by launching multiple processes on a single machine. Each process acts as an independent node and communicates with others via network ports.
-For implementation details and configuration examples, please refer to the sample code in the [`examples/notebooks`](./examples/notebooks/) directory.
+If the network topology is given as a mixing matrix $W$, the `Graph` class can be used as a helper to convert it into neighbor information.
+For example, `graph[i]` returns the neighbors and corresponding weights for node `i`.
+
+```python
+import numpy as np
+from conops import Graph
+
+L = np.array([
+    [ 2, -1,  0, -1],
+    [-1,  2, -1,  0],
+    [ 0, -1,  2, -1],
+    [-1,  0, -1,  2],
+])
+W = np.eye(4) - 0.2 * L
+
+graph = Graph.from_mixing_matrix(W)
+
+# neighbors of node 0
+neighbors = graph[0]
+print(neighbors)
+```
+
+### Running Distributed Algorithms with Ray
+
+If you do not have access to multiple machines, you can still run distributed optimization algorithms on a single machine using multiple processes.
+The notebook examples also support multi-machine execution with Ray.
+
+In either case, the key configuration is the `transport` parameter of `NodeHandle`:
+
+- use `"ipc"` for communication between processes on a single machine
+- use `"tcp"` for communication across machines over the network
+
+For implementation details and example configurations, please refer to the sample notebooks in the [`examples/notebooks`](./examples/notebooks/) directory.
 
 ## License
 
