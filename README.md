@@ -2,7 +2,7 @@
 Distributed Composite Optimization (DisCoOpt) is a Python package for solving composite optimization problems of the form
 
 $$
-\min_{x \in \mathbb{R}^d} \quad \frac{1}{n} \sum_{i=1}^n f_i(x) + g(x),
+\min_{x \in \mathbb{R}^d} \quad \sum_{i=1}^n \left( f_i(x) + g_i(x) \right),
 $$
 
 where each $f_i: \mathbb{R}^d \rightarrow \mathbb{R}$ is a smooth loss function associated with a local dataset or agent, and $g(x)$ is a (possibly non-smooth) regularization term.
@@ -136,7 +136,7 @@ In either case, the key configuration is the `transport` parameter of `NodeHandl
 - use `"ipc"` for communication between processes on a single machine
 - use `"tcp"` for communication across machines over the network
 
-For implementation details and example configurations, please refer to the sample notebooks in the [`examples/notebooks`](./examples/notebooks/) directory.
+For implementation details and example configurations, please refer to the sample notebooks in the [`examples`](./examples/) directory.
 
 ## License
 
