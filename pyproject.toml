@@ -14,7 +14,7 @@ authors = [
 
 dependencies = [
     "jax>=0.5.3",
-    "conops @ git+https://github.com/rui-huang-opt/conops.git@0.2.0",
+    "conops @ git+https://github.com/rui-huang-opt/conops.git@0.3.0",
 ]
 
 [project.optional-dependencies]
@@ -24,7 +24,6 @@ examples = [
     "networkx>=3.4.2",
     "ray[default]==2.54.1",
 ]
-autograd = ["autograd>=1.7.0"]
 notebook = ["ipykernel>=6.29.5"]
 
 [tool.setuptools.packages.find]
