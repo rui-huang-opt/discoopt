@@ -2,7 +2,7 @@ from logging import getLogger
 from abc import ABCMeta, abstractmethod
 from typing import Callable, cast
 
-import jax
+import autograd
 import numpy as np
 from numpy.typing import NDArray
 
@@ -11,34 +11,11 @@ from .regularizer import Regularizer
 
 logger = getLogger("dco.optimizer")
 
-LossFn = Callable[[NDArray[np.float64]], float | NDArray[np.float64] | jax.Array]
+LossFn = Callable[[NDArray[np.float64]], np.floating | NDArray[np.float64]]
+
+GradFn = Callable[[NDArray[np.float64]], NDArray[np.float64]]
 
 ProxG = Callable[[float, NDArray[np.float64]], NDArray[np.float64]]
-
-
-def grad_fn(loss_fn: LossFn) -> Callable[[NDArray[np.float64]], NDArray]:
-    """
-    Returns a gradient function for the given function loss_fn using either JAX.
-
-    Parameters
-    ----------
-    loss_fn : Callable[[NDArray[float64]], float64 | Array]
-        The function for which to compute the gradient.
-
-    Returns
-    -------
-    Callable[[NDArray[float64]], NDArray[float64]]
-        A function that computes the gradient of loss_fn.
-    """
-
-    jax.config.update("jax_platforms", "cpu")
-
-    raw_grad = jax.jit(jax.grad(loss_fn))
-
-    def wrapped_grad(x: NDArray[np.float64]) -> NDArray:
-        return np.asarray(raw_grad(x))
-
-    return wrapped_grad
 
 
 class Optimizer(metaclass=ABCMeta):
@@ -71,7 +48,7 @@ class Optimizer(metaclass=ABCMeta):
         gamma: float,
         reg: Regularizer | None = None,
     ):
-        self._grad_fn = grad_fn(loss_fn)
+        self._grad_fn = cast(GradFn, autograd.grad(loss_fn, 0))
         self._network = network
         self._gamma = gamma
         self._aux_var: dict[str, NDArray[np.float64]] = {}
