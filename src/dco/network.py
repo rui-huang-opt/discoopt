@@ -4,7 +4,7 @@ from numpy import float64
 from numpy.typing import NDArray
 
 
-class NetworkOps(Protocol):
+class Network(Protocol):
     """
     Protocol for communication operations in distributed optimization.
     This protocol must realize the weighted mixing operation used in distributed optimization algorithms.

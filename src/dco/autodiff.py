@@ -7,7 +7,6 @@ from numpy.typing import NDArray
 
 def nabla(
     f: Callable[[NDArray[np.float64]], float | NDArray[np.float64] | jax.Array],
-    use_jax: bool,
 ) -> Callable[[NDArray[np.float64]], NDArray[np.float64]]:
     """
     Returns a gradient function for the given function f using either JAX or Autograd.
@@ -28,11 +27,6 @@ def nabla(
     Callable[[NDArray[float64]], NDArray[float64]]
         A function that computes the gradient of f.
     """
-
-    if not use_jax:
-        import autograd
-
-        return autograd.grad(f)  # type: ignore
 
     jax.config.update("jax_platforms", "cpu")
 
