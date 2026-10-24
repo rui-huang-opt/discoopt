@@ -14,7 +14,7 @@ authors = [
 
 dependencies = [
     "autograd>=1.9.1",
-    "conops @ git+https://github.com/rui-huang-opt/conops.git@0.5.0",
+    "conops @ git+https://github.com/rui-huang-opt/conops.git@0.5.2",
 ]
 
 [project.optional-dependencies]
